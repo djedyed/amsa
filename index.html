@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="app-version" content="1.0.0">
+<meta name="description" content="AMSA public demo: one console for every streaming platform. Multistream, merged feed and unified analytics.">
+<title>AMSA Creator Console · Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a mixing-desk console. Left rail of "channels" (views), main deck of meters and faders. */
+:root{
+  --bg:#f3f1ec; --panel:#ffffff; --ink:#1c1b22; --muted:#6b6876; --line:#e2ded6;
+  --accent:#c2410c; --accent-soft:#fde5d6;
+  --good:#15803d; --warn:#b45309; --bad:#b91c1c;
+  --yt:#d93025; --tt:#0e9488; --tw:#7c3aed; --fb:#1d63d6; --ig:#c0267a; --kick:#4d9a10; --x:#3f3f46; --th:#8a6d1f; --own:#c2410c;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body:"IBM Plex Sans", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131218; --panel:#1c1b23; --ink:#ece9f2; --muted:#9a96a8; --line:#2d2b37;
+    --accent:#fb8a4c; --accent-soft:#3a2418;
+    --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+    --yt:#ff5a4e; --tt:#2dd4bf; --tw:#a78bfa; --fb:#60a5fa; --ig:#f472b6; --kick:#84cc16; --x:#d4d4d8; --th:#e0b84a; --own:#fb8a4c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131218; --panel:#1c1b23; --ink:#ece9f2; --muted:#9a96a8; --line:#2d2b37;
+  --accent:#fb8a4c; --accent-soft:#3a2418;
+  --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --yt:#ff5a4e; --tt:#2dd4bf; --tw:#a78bfa; --fb:#60a5fa; --ig:#f472b6; --kick:#84cc16; --x:#d4d4d8; --th:#e0b84a; --own:#fb8a4c;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:22px;font-weight:800}
+h2{font-size:17px;font-weight:700}
+h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100%}
+nav{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 16px}
+.brand .dot{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff;font:800 13px var(--display)}
+.brand small{display:block;color:var(--muted);font-size:12px}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-weight:500}
+nav a:hover{background:var(--bg)}
+nav a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+nav a .k{font:500 11px var(--mono);color:var(--muted);width:18px}
+nav .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:8px}
+main{padding:24px clamp(16px,3vw,36px) 48px;display:flex;flex-direction:column;gap:20px;min-width:0}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
+.sample{font:500 12px var(--mono);color:var(--warn);border:1px solid currentColor;border-radius:999px;padding:2px 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 12px 4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.chip i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.chip[aria-pressed="false"]{opacity:.45}
+.grid{display:grid;gap:16px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.kpi .v{font:800 28px var(--display);font-variant-numeric:tabular-nums;margin-top:4px}
+.kpi .d{font-size:13px;font-variant-numeric:tabular-nums}
+.up{color:var(--good)} .down{color:var(--bad)}
+.two{grid-template-columns:2fr 1fr}
+.half{grid-template-columns:1fr 1fr}
+.card header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.card header span{color:var(--muted);font-size:13px}
+svg text{fill:var(--muted);font:11px var(--body)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{width:10px;height:3px;display:inline-block;margin-right:5px;vertical-align:middle;border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:middle}
+td.n,th.n{text-align:right}
+.bar{height:8px;border-radius:4px;background:var(--accent)}
+.bartrack{background:var(--bg);border-radius:4px;width:100%}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%}
+.heat{display:grid;grid-template-columns:34px repeat(24,1fr);gap:2px;font-size:10px;color:var(--muted)}
+.heat div.c{aspect-ratio:1;border-radius:2px;background:var(--accent)}
+.live{border-color:var(--bad)}
+.livebadge{display:inline-flex;align-items:center;gap:6px;color:var(--bad);font:700 12px var(--mono)}
+.livebadge::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--bad);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion: reduce){.livebadge::before{animation:none}}
+.meter{display:grid;grid-template-columns:110px 1fr 70px;gap:10px;align-items:center;font-size:13px;margin:6px 0}
+.meter .t{height:10px;background:var(--bg);border-radius:5px;overflow:hidden}
+.meter .t b{display:block;height:100%;transition:width .6s}
+.btn{border:1px solid var(--line);background:var(--panel);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+label{font-size:13px;font-weight:600;display:block;margin-bottom:4px}
+input[type=text],input[type=password],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.dest{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.dest:last-child{border:0}
+.dest .ep{font:12px var(--mono);color:var(--muted);word-break:break-all}
+.note{font-size:12px;color:var(--muted)}
+.warn{color:var(--warn)}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;font:12px/1.5 var(--mono);overflow-x:auto;white-space:pre;margin:0}
+.feed{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.post .thumb{aspect-ratio:16/9;border-radius:8px;margin-bottom:10px;position:relative;overflow:hidden}
+.post .thumb.v{aspect-ratio:9/12}
+.post .thumb span{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.65);color:#fff;font:600 11px var(--mono);padding:2px 6px;border-radius:4px}
+.post h4{margin:0 0 4px;font-size:14px;line-height:1.35}
+.post .m{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:24px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);color:var(--accent)}
+video{width:100%;border-radius:8px;background:#000;max-height:360px}
+.view{display:none;flex-direction:column;gap:20px}
+.view.on{display:flex}
+.status{font-size:12px;font-weight:600}
+.ok{color:var(--good)} .no{color:var(--muted)} .lim{color:var(--warn)}
+.conn{font-size:12px;padding:6px 8px;border-radius:8px;background:var(--bg)}
+.form{display:grid;gap:12px}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:inline-flex;align-items:center;gap:6px;font-weight:500;border:1px solid var(--line);border-radius:999px;padding:4px 10px;margin:0;cursor:pointer}
+.stars{display:flex;gap:4px}
+.stars button{font-size:22px;background:none;border:0;cursor:pointer;color:var(--line);padding:0 2px}
+.stars button.on{color:var(--warn)}
+.msg{font-size:13px;min-height:1.4em}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.row2{grid-template-columns:1fr}}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  nav{position:static;height:auto;flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line);padding:10px}
+  .brand{padding:0 8px 0 0;width:100%}
+  nav .foot{display:none}
+  nav a{padding:6px 10px;font-size:14px}
+  nav a .k{display:none}
+  .two,.half{grid-template-columns:1fr}
+}
+@media (max-width:420px){.meter{grid-template-columns:80px 1fr 56px}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav aria-label="Sections">
+  <div class="brand"><div class="dot">AM</div><div><strong>AMSA</strong><small>All Media Streaming App</small></div></div>
+  <a href="#dashboard" data-v="dashboard"><span class="k">01</span>Analytics</a>
+  <a href="#golive" data-v="golive"><span class="k">02</span>Go live</a>
+  <a href="#feed" data-v="feed"><span class="k">03</span>Feed</a>
+  <a href="#channel" data-v="channel"><span class="k">04</span>My channel</a>
+  <a href="#connect" data-v="connect"><span class="k">05</span>Connections</a>
+  <a href="#join" data-v="join"><span class="k">06</span>Join the beta</a>
+  <div class="foot"><div class="conn" id="connState">⚪ Connecting…</div><p style="margin:8px 0 0">Public demo v<span id="ver">1.0.0</span>. All figures are sample data.</p></div>
+</nav>
+<main>
+
+<!-- ============ ANALYTICS ============ -->
+<section class="view" id="v-dashboard">
+  <div class="top">
+    <div><h1>Analytics, all platforms</h1><div class="note">Last 28 days · <span class="sample">SAMPLE DATA</span></div></div>
+    <div class="chips" id="pfChips" role="group" aria-label="Filter platforms"></div>
+  </div>
+  <div class="grid kpis" id="kpis"></div>
+
+  <div class="card live" id="liveCard">
+    <header><h2><span class="livebadge">LIVE</span>&nbsp; Friday Amapiano x Jersey Club set</h2><span id="liveClock">00:00:00</span></header>
+    <div class="grid half">
+      <div>
+        <h3>Concurrent viewers by platform</h3>
+        <div id="liveMeters"></div>
+      </div>
+      <div>
+        <h3>Total viewers, last 60 seconds</h3>
+        <svg id="liveSpark" viewBox="0 0 400 120" width="100%" height="120" role="img" aria-label="Live viewer trend"></svg>
+        <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px" id="liveStats"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid two">
+    <div class="card">
+      <header><h2>Daily views</h2><span>stacked by platform</span></header>
+      <svg id="viewsChart" viewBox="0 0 640 240" width="100%" role="img" aria-label="Daily views by platform"></svg>
+      <div class="legend" id="viewsLegend"></div>
+    </div>
+    <div class="card">
+      <header><h2>Revenue</h2><span>USD, 28 days</span></header>
+      <div id="revTable"></div>
+    </div>
+  </div>
+
+  <div class="grid half">
+    <div class="card">
+      <header><h2>Where your audience is</h2><span>top cities</span></header>
+      <div id="geo"></div>
+    </div>
+    <div class="card">
+      <header><h2>Best time to post</h2><span>engagement by hour, New York time</span></header>
+      <div class="heat" id="heat"></div>
+      <div class="note" id="heatNote" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <header><h2>Top content</h2><span>ranked by engagement rate</span></header>
+    <div style="overflow-x:auto"><table id="topTable"></table></div>
+  </div>
+</section>
+
+<!-- ============ GO LIVE ============ -->
+<section class="view" id="v-golive">
+  <div class="top"><div><h1>Go live everywhere</h1><div class="note">One stream in, many out. Your encoder (OBS, or Serato's video out into OBS) sends to AMSA once; AMSA fans it out.</div></div></div>
+  <div class="grid two">
+    <div class="card">
+      <header><h2>Destinations</h2><span id="destCount"></span></header>
+      <div id="dests"></div>
+    </div>
+    <div class="card">
+      <header><h2>Stream details</h2></header>
+      <div class="grid" style="gap:12px">
+        <div><label for="sTitle">Title</label><input type="text" id="sTitle" value="Friday Amapiano x Jersey Club set"></div>
+        <div><label for="sCat">Category</label><select id="sCat"><option>Music / DJ</option><option>Art / Creative</option><option>Just chatting</option></select></div>
+        <div><label for="sQual">Output quality</label><select id="sQual"><option value="1080">1080p60 · 6000 kbps</option><option value="720" selected>720p30 · 3000 kbps</option><option value="480">480p · 1200 kbps (low-data audiences)</option></select></div>
+        <button class="btn primary" id="goBtn">Start simulated stream</button>
+        <div class="note">Stream keys stay in this page's memory and are never saved. In the real build they live encrypted in your database.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <header><h2>Generated relay config</h2><button class="btn" id="copyCfg">Copy</button></header>
+    <p class="note" style="margin:0 0 10px">Drop this into an nginx-rtmp server (free, open source) to fan one stream out to every destination you switched on. Keys shown as placeholders unless you typed them.</p>
+    <pre id="cfg"></pre>
+  </div>
+</section>
+
+<!-- ============ FEED ============ -->
+<section class="view" id="v-feed">
+  <div class="top">
+    <div><h1>One feed, every platform</h1><div class="note">Creators you follow, merged and sorted by time · <span class="sample">SAMPLE DATA</span></div></div>
+    <div class="chips" id="feedChips" role="group" aria-label="Filter feed"></div>
+  </div>
+  <div class="grid feed" id="feedGrid"></div>
+</section>
+
+<!-- ============ CHANNEL ============ -->
+<section class="view" id="v-channel">
+  <div class="top"><div><h1>My channel</h1><div class="note">Your own home on the web: videos, mixes and art you host yourself (PeerTube or Owncast underneath).</div></div></div>
+  <div class="grid two">
+    <div class="card">
+      <header><h2>Player</h2><span id="nowPlaying">Drop a video or audio file to preview it</span></header>
+      <video id="player" controls playsinline></video>
+    </div>
+    <div class="card">
+      <header><h2>Upload</h2></header>
+      <div class="drop" id="drop">
+        <p style="margin:0 0 10px">Drag a mix, clip or art video here</p>
+        <label for="file" class="btn" style="display:inline-block">Choose file</label>
+        <input type="file" id="file" accept="video/*,audio/*" hidden>
+      </div>
+      <p class="note">Files play here in your browser only. Nothing is uploaded in this prototype.</p>
+    </div>
+  </div>
+  <div class="card">
+    <header><h2>Library</h2><span id="libCount"></span></header>
+    <div style="overflow-x:auto"><table id="libTable"></table></div>
+  </div>
+</section>
+
+<!-- ============ CONNECTIONS ============ -->
+<section class="view" id="v-connect">
+  <div class="top"><div><h1>Connections</h1><div class="note">What each platform lets AMSA do through its official API. This decides what the analytics can show.</div></div></div>
+  <div class="card" style="overflow-x:auto"><table id="connTable"></table></div>
+</section>
+
+<!-- ============ JOIN ============ -->
+<section class="view" id="v-join">
+  <div class="top"><div><h1>Join the AMSA beta</h1><div class="note">Get early access, and tell us what to build first.</div></div></div>
+  <div class="grid half">
+    <form class="card form" id="wlForm" novalidate>
+      <h2>Early access</h2>
+      <div><label for="wlEmail">Email</label><input type="text" inputmode="email" autocomplete="email" id="wlEmail" placeholder="you@example.com" required></div>
+      <div><label for="wlRole">I am a…</label><select id="wlRole"><option value="dj">DJ / producer</option><option value="creator">Creator</option><option value="artist">Visual artist</option><option value="viewer">Viewer / fan</option><option value="brand">Brand or promoter</option><option value="other">Other</option></select></div>
+      <fieldset style="border:0;padding:0;margin:0"><legend style="font-size:13px;font-weight:600;margin-bottom:6px">Platforms I use</legend><div class="checks" id="wlPlatforms"></div></fieldset>
+      <div class="row2"><div><label for="wlCity">City</label><input type="text" id="wlCity" placeholder="Harare"></div><div><label for="wlCountry">Country</label><input type="text" id="wlCountry" placeholder="Zimbabwe"></div></div>
+      <button class="btn primary" type="submit">Request early access</button>
+      <div class="msg" id="wlMsg" role="status"></div>
+      <p class="note" style="margin:0">We only use your email to invite you to the beta. Nobody else sees it.</p>
+    </form>
+    <form class="card form" id="fbForm" novalidate>
+      <h2>Feedback on this demo</h2>
+      <div><span style="font-size:13px;font-weight:600">How useful would AMSA be for you?</span><div class="stars" id="stars" role="radiogroup" aria-label="Rating"></div></div>
+      <fieldset style="border:0;padding:0;margin:0"><legend style="font-size:13px;font-weight:600;margin-bottom:6px">Build first</legend><div class="checks" id="fbWants"></div></fieldset>
+      <div><label for="fbMsg">Anything else?</label><textarea id="fbMsg" rows="4" maxlength="2000" placeholder="What would make you switch to AMSA?"></textarea></div>
+      <button class="btn primary" type="submit">Send feedback</button>
+      <div class="msg" id="fbStatus" role="status"></div>
+    </form>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+// ---------- data ----------
+var P=[
+ {id:"yt",name:"YouTube",rtmp:"rtmp://a.rtmp.youtube.com/live2",live:"ok",an:"ok",post:"ok",api:"YouTube Data + Analytics API",notes:"Full analytics incl. geography, revenue (if monetised), live concurrents."},
+ {id:"tt",name:"TikTok",rtmp:"(key issued per stream in TikTok LIVE Studio)",live:"lim",an:"lim",post:"ok",api:"TikTok Content Posting + Display API",notes:"Posting works via API. LIVE RTMP keys need eligibility; analytics are basic per-video stats."},
+ {id:"tw",name:"Twitch",rtmp:"rtmp://live.twitch.tv/app",live:"ok",an:"lim",post:"no",api:"Twitch Helix API + EventSub",notes:"Live viewers, followers, subs, bits in real time. No geography via API."},
+ {id:"fb",name:"Facebook",rtmp:"rtmps://live-api-s.facebook.com:443/rtmp",live:"ok",an:"ok",post:"ok",api:"Meta Graph API (Pages)",notes:"Page insights, live video, reels. Needs a Facebook Page and Meta app review."},
+ {id:"ig",name:"Instagram",rtmp:"(no public RTMP for most accounts)",live:"no",an:"ok",post:"ok",api:"Instagram Graph API",notes:"Needs a Business/Creator account linked to a Page. Reels + insights yes, going live via API no."},
+ {id:"kick",name:"Kick",rtmp:"(ingest URL from your Kick creator dashboard)",live:"ok",an:"lim",post:"no",api:"Kick public API",notes:"RTMP works with your key; API is young, stats are limited."},
+ {id:"x",name:"X",rtmp:"(RTMP URL from X Media Studio › Producer)",live:"lim",an:"lim",post:"ok",api:"X API v2 (pay-per-use, no free tier)",notes:"Posting and reading your own stats cost per call (about $0.001 per owned read). Live via Media Studio Producer if your account has it."},
+ {id:"th",name:"Threads",rtmp:"(no live streaming on Threads)",live:"no",an:"ok",post:"ok",api:"Threads API (Meta, free)",notes:"Post text, images and video; per-post and account insights incl. follower demographics. Uses the same Meta login as Instagram."},
+ {id:"own",name:"AMSA channel",rtmp:"rtmp://your-server/live",live:"ok",an:"ok",post:"ok",api:"Owncast / PeerTube (self-hosted)",notes:"Your own platform. You own 100% of the data, including full geography."}
+];
+var C={}; P.forEach(function(p){C[p.id]=getComputedStyle(document.documentElement).getPropertyValue("--"+p.id).trim();});
+function col(id){return "var(--"+id+")";}
+
+var seed=7; function rnd(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646;}
+var days=28, base={yt:4200,tt:9800,tw:1600,fb:2100,ig:5200,kick:500,x:1300,th:900,own:700};
+var views={}; P.forEach(function(p){views[p.id]=[];for(var i=0;i<days;i++){var w=(i%7===4||i%7===5)?1.45:1;var trend=1+i*0.012;views[p.id].push(Math.round(base[p.id]*w*trend*(0.75+rnd()*0.5)));}});
+var rev={yt:{label:"Ads + memberships",v:612},tt:{label:"Gifts + creator rewards",v:288},tw:{label:"Subs + bits",v:441},fb:{label:"Stars + in-stream ads",v:96},ig:{label:"Gifts + bonuses",v:74},kick:{label:"Subs",v:58},x:{label:"Creator revenue sharing + subs",v:63},th:{label:"Bonuses (where offered)",v:0},own:{label:"Tips + downloads",v:205}};
+var geo=[["New York City, US",24.1],["Johannesburg, ZA",14.8],["Harare, ZW",11.2],["Newark / Jersey City, US",9.6],["London, UK",6.3],["Gaborone, BW",5.4],["Cape Town, ZA",4.9],["Bulawayo, ZW",3.8],["Lagos, NG",3.1],["Dar es Salaam, TZ",2.2]];
+var content=[
+ ["Amapiano x Jersey Club mix, vol. 3","yt",182400,11.8,"Mix"],
+ ["Crowd reaction at the drop (vertical)","tt",611000,14.2,"Short"],
+ ["Live from Brooklyn rooftop","tw",38900,9.4,"Live"],
+ ["Generative art set visuals, 60s","ig",94300,12.6,"Reel"],
+ ["Gqom to Baltimore club transition","tt",276500,10.9,"Short"],
+ ["Harare sunset session","own",12200,13.1,"Mix"],
+ ["How I build a set in Serato","yt",47800,8.7,"Tutorial"],
+ ["Friday night live replay","fb",22100,6.2,"Live"],
+ ["Clip: 30s of the log drum drop","x",41800,7.4,"Post"],
+ ["Tonight\u2019s setlist thread","th",18900,10.3,"Post"]
+];
+
+var on={}; P.forEach(function(p){on[p.id]=true;});
+function fmt(n){return n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?(n/1e3).toFixed(n>=1e5?0:1)+"K":String(Math.round(n));}
+function pname(id){for(var i=0;i<P.length;i++)if(P[i].id===id)return P[i].name;}
+function pill(id){return '<span class="pill"><i style="background:'+col(id)+'"></i>'+pname(id)+'</span>';}
+function el(id){return document.getElementById(id);}
+
+// ---------- chips ----------
+function chips(target,state,cb){
+  el(target).innerHTML=P.map(function(p){return '<button class="chip" aria-pressed="'+state[p.id]+'" data-id="'+p.id+'"><i style="background:'+col(p.id)+'"></i>'+p.name+'</button>';}).join("");
+  el(target).onclick=function(e){var b=e.target.closest(".chip");if(!b)return;var id=b.dataset.id;state[id]=!state[id];
+    if(!Object.keys(state).some(function(k){return state[k];}))state[id]=true;
+    b.setAttribute("aria-pressed",state[id]);cb();if(window.AMSA)AMSA.track("filter",{view:target,platform:id,meta:{on:state[id]}});};
+}
+
+// ---------- dashboard ----------
+function active(){return P.filter(function(p){return on[p.id];});}
+function renderKPIs(){
+  var a=active(),tv=0,prev=0,r=0;
+  a.forEach(function(p){views[p.id].forEach(function(v,i){tv+=v;});prev+=views[p.id][0]*days*0.9;r+=rev[p.id].v;});
+  var foll={yt:18400,tt:96200,tw:7300,fb:11800,ig:42600,kick:1900,x:8700,th:15300,own:2400},f=0;a.forEach(function(p){f+=foll[p.id];});
+  var wh=Math.round(tv*0.071);
+  var k=[["Followers",fmt(f),"+6.4%",1],["Views",fmt(tv),"+18.2%",1],["Watch hours",fmt(wh),"+3.1%",1],["Revenue","$"+r.toLocaleString(),"+12.0%",1],["Engagement rate","9.8%","−0.4 pts",0]];
+  el("kpis").innerHTML=k.map(function(x){return '<div class="card kpi"><h3>'+x[0]+'</h3><div class="v">'+x[1]+'</div><div class="d '+(x[3]?"up":"down")+'">'+x[2]+' vs prior 28 days</div></div>';}).join("");
+}
+function renderViews(){
+  var a=active(),W=640,H=240,L=44,B=24,T=10,R=8;
+  var tot=[];for(var i=0;i<days;i++){var s=0;a.forEach(function(p){s+=views[p.id][i];});tot.push(s);}
+  var max=Math.max.apply(null,tot);var step=Math.pow(10,Math.floor(Math.log10(max)));var top=Math.ceil(max/step)*step;
+  var x=function(i){return L+i*(W-L-R)/(days-1);},y=function(v){return T+(H-T-B)*(1-v/top);};
+  var s="";
+  for(var g=0;g<=4;g++){var gv=top*g/4;s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(gv)+'" y2="'+y(gv)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y(gv)+4)+'" text-anchor="end">'+fmt(gv)+'</text>';}
+  var acc=new Array(days).fill(0);
+  a.forEach(function(p){
+    var lo=acc.slice(),hi=acc.map(function(v,i){return v+views[p.id][i];});
+    var d="M"+hi.map(function(v,i){return x(i)+","+y(v);}).join("L")+"L"+lo.map(function(v,i){return x(i)+","+y(v);}).reverse().join("L")+"Z";
+    s+='<path d="'+d+'" fill="'+col(p.id)+'" fill-opacity=".8" stroke="var(--panel)" stroke-width=".8"/>';
+    acc=hi;
+  });
+  s+='<circle cx="'+x(days-1)+'" cy="'+y(acc[days-1])+'" r="4" fill="var(--ink)"/><text x="'+(x(days-1)-6)+'" y="'+(y(acc[days-1])+18)+'" text-anchor="end" style="fill:var(--ink);font-weight:600;paint-order:stroke;stroke:var(--panel);stroke-width:4px">'+fmt(acc[days-1])+' today</text>';
+  [0,7,14,21,27].forEach(function(i){var d=new Date(2026,9,31-(27-i));s+='<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="'+(i===27?"end":i===0?"start":"middle")+'">'+d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+'</text>';});
+  el("viewsChart").innerHTML=s;
+  el("viewsLegend").innerHTML=a.map(function(p){return '<span><i style="background:'+col(p.id)+';height:10px"></i>'+p.name+'</span>';}).join("");
+}
+function renderRev(){
+  var a=active().slice().sort(function(m,n){return rev[n.id].v-rev[m.id].v;}),max=rev[a[0].id].v,t=0;
+  var h='<table><tr><th>Platform</th><th></th><th class="n">USD</th></tr>';
+  a.forEach(function(p){t+=rev[p.id].v;h+='<tr><td>'+pill(p.id)+'<div class="note">'+rev[p.id].label+'</div></td><td style="width:40%"><div class="bartrack"><div class="bar" style="width:'+(rev[p.id].v/max*100)+'%;background:'+col(p.id)+'"></div></div></td><td class="n">$'+rev[p.id].v+'</td></tr>';});
+  h+='<tr><td><strong>Total</strong></td><td></td><td class="n"><strong>$'+t.toLocaleString()+'</strong></td></tr></table>';
+  el("revTable").innerHTML=h;
+}
+function renderGeo(){
+  el("geo").innerHTML='<table>'+geo.map(function(g){return '<tr><td>'+g[0]+'</td><td style="width:42%"><div class="bartrack"><div class="bar" style="width:'+(g[1]/geo[0][1]*100)+'%"></div></div></td><td class="n">'+g[1].toFixed(1)+'%</td></tr>';}).join("")+'</table><p class="note">Geography comes from YouTube, Meta and your own channel. Twitch, TikTok and X do not share it through their APIs. Threads gives follower country and city.</p>';
+}
+function renderHeat(){
+  var dn=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],h='<div></div>';
+  for(var c=0;c<24;c++)h+='<div style="text-align:center">'+(c%6===0?c:"")+'</div>';
+  var best=[0,0,0];
+  dn.forEach(function(d,di){h+='<div>'+d+'</div>';for(var c=0;c<24;c++){
+    var ev=Math.exp(-Math.pow((c-21)/3.2,2))+0.55*Math.exp(-Math.pow((c-13)/2.5,2));
+    var wk=[0.85,0.8,0.88,0.95,1.2,1.25,1.05][di]; var v=Math.min(1,ev*wk*(0.9+((di*7+c*3)%5)*0.03)); if(v>best[0])best=[v,d,c];
+    h+='<div class="c" style="opacity:'+(0.08+v*0.92).toFixed(2)+'" title="'+d+' '+c+':00"></div>';}});
+  el("heat").innerHTML=h;
+  el("heatNote").textContent="Peak: "+best[1]+" around "+best[2]+":00 New York time, which is about "+((best[2]+6)%24)+":00 in Harare and Johannesburg. A second, smaller peak sits at lunchtime.";
+}
+function renderTop(){
+  var a=content.filter(function(c){return on[c[1]];}).sort(function(m,n){return n[3]-m[3];});
+  el("topTable").innerHTML='<tr><th>Title</th><th>Platform</th><th>Type</th><th class="n">Views</th><th class="n">Engagement</th></tr>'+a.map(function(c){var hot=c[3]>=12;return '<tr><td>'+c[0]+'</td><td>'+pill(c[1])+'</td><td>'+c[4]+'</td><td class="n">'+fmt(c[2])+'</td><td class="n'+(hot?' up':'')+'">'+c[3].toFixed(1)+'%'+(hot?' ▲':'')+'</td></tr>';}).join("");
+}
+function renderDash(){renderKPIs();renderViews();renderRev();renderGeo();renderTop();}
+
+// ---------- live sim ----------
+var liveV={yt:640,tt:1880,tw:410,fb:150,ig:0,kick:60,own:95},hist=[],t0=Date.now()-(1*3600+12*60)*1000,chatRate=0;
+function tickLive(){
+  P.forEach(function(p){if(liveV[p.id]>0)liveV[p.id]=Math.max(5,Math.round(liveV[p.id]*(0.97+rnd()*0.065)));});
+  var tot=0;P.forEach(function(p){tot+=liveV[p.id];});hist.push(tot);if(hist.length>60)hist.shift();
+  chatRate=Math.round(tot*0.06*(0.8+rnd()*0.4));
+  var max=Math.max.apply(null,P.map(function(p){return liveV[p.id];}));
+  el("liveMeters").innerHTML=P.map(function(p){var v=liveV[p.id];return '<div class="meter"><span>'+p.name+'</span><div class="t"><b style="width:'+(v/max*100)+'%;background:'+col(p.id)+'"></b></div><span style="text-align:right;font-variant-numeric:tabular-nums">'+(v?v.toLocaleString():(p.live==="no"?"no live API":"off"))+'</span></div>';}).join("");
+  var mn=Math.min.apply(null,hist)*0.95,mx=Math.max.apply(null,hist)*1.02,W=400,H=120;
+  var pts=hist.map(function(v,i){return [i*(W/59),H-6-(H-14)*(v-mn)/(mx-mn||1)];});
+  var d="M"+pts.map(function(p){return p.join(",");}).join("L");
+  var last=pts[pts.length-1];
+  el("liveSpark").innerHTML='<line x1="0" x2="'+W+'" y1="'+(H-6)+'" y2="'+(H-6)+'" stroke="var(--line)"/><path d="'+d+"L"+last[0]+","+(H-6)+"L0,"+(H-6)+'Z" fill="var(--bad)" fill-opacity=".12"/><path d="'+d+'" fill="none" stroke="var(--bad)" stroke-width="2"/><circle cx="'+last[0]+'" cy="'+last[1]+'" r="4" fill="var(--bad)"/>';
+  var peak=Math.max.apply(null,hist);
+  el("liveStats").innerHTML=[["Watching now",tot.toLocaleString()],["Peak",peak.toLocaleString()],["Chat msgs/min",chatRate]].map(function(s){return '<div><h3>'+s[0]+'</h3><div style="font:800 20px var(--display);font-variant-numeric:tabular-nums">'+s[1]+'</div></div>';}).join("");
+  var e=Math.floor((Date.now()-t0)/1000);el("liveClock").textContent=[Math.floor(e/3600),Math.floor(e/60)%60,e%60].map(function(n){return String(n).padStart(2,"0");}).join(":")+" on air";
+}
+for(var i=0;i<60;i++)tickLive();
+
+// ---------- go live ----------
+var dOn={yt:true,tt:false,tw:true,fb:true,ig:false,kick:false,x:true,th:false,own:true},keys={};
+function renderDests(){
+  el("dests").innerHTML=P.map(function(p){var dis=p.live==="no";
+    return '<div class="dest"><input type="checkbox" id="d-'+p.id+'" '+(dOn[p.id]&&!dis?"checked":"")+(dis?" disabled":"")+' aria-label="Send to '+p.name+'"><div><label for="d-'+p.id+'" style="margin:0">'+pill(p.id)+'</label><div class="ep">'+p.rtmp+'</div>'+(dis?'<div class="note warn">No live streaming from outside apps. Post a clip of the set instead.</div>':(p.live==="lim"?'<div class="note warn">Needs LIVE access on your account.</div>':''))+'</div><input type="password" placeholder="stream key" id="k-'+p.id+'" style="width:130px"'+(dis?" disabled":"")+' aria-label="'+p.name+' stream key"></div>';}).join("");
+  el("dests").onchange=function(e){var id=e.target.id.slice(2);if(e.target.id.indexOf("d-")===0)dOn[id]=e.target.checked;cfg();};
+  el("dests").oninput=function(e){if(e.target.id.indexOf("k-")===0){keys[e.target.id.slice(2)]=e.target.value;cfg();}};
+  cfg();
+}
+function cfg(){
+  var q=el("sQual").value,br={1080:"6000k",720:"3000k",480:"1200k"}[q];
+  var list=P.filter(function(p){return dOn[p.id]&&p.live!=="no";});
+  el("destCount").textContent=list.length+" of "+P.length+" on";
+  var s="# nginx.conf  (nginx + libnginx-mod-rtmp, both free)\nrtmp {\n  server {\n    listen 1935;\n    application live {\n      live on;\n      record off;\n";
+  if(q!=="1080")s+="      # transcode once to "+q+"p so weak connections in Harare or Gaborone keep up\n      exec ffmpeg -i rtmp://localhost/live/$name -c:v libx264 -preset veryfast -b:v "+br+" -s "+(q==="720"?"1280x720":"854x480")+" -c:a aac -b:a 160k -f flv rtmp://localhost/out/$name;\n    }\n    application out {\n      live on;\n";
+  list.forEach(function(p){if(p.id==="own")s+="      push rtmp://your-owncast-server/live/"+(keys.own?"••••••••":"OWNCAST_KEY")+";  # AMSA channel\n";else if(p.id==="tt")s+="      push "+"TIKTOK_SERVER_URL/"+(keys.tt?"••••••••":"TIKTOK_KEY")+";  # TikTok (URL changes each stream)\n";else if(p.id==="x")s+="      push X_PRODUCER_RTMP_URL/"+(keys.x?"••••••••":"X_KEY")+";  # X (Media Studio Producer)\n";else if(p.id==="kick")s+="      push KICK_INGEST_URL/"+(keys.kick?"••••••••":"KICK_KEY")+";  # Kick\n";else s+="      push "+p.rtmp+"/"+(keys[p.id]?"••••••••":p.id.toUpperCase()+"_KEY")+";  # "+p.name+"\n";});
+  s+="    }\n  }\n}";
+  el("cfg").textContent=s;
+}
+el("sQual").onchange=cfg;
+var streaming=false;
+el("goBtn").onclick=function(){streaming=!streaming;this.textContent=streaming?"Stop simulated stream":"Start simulated stream";this.className="btn "+(streaming?"danger":"primary");
+  P.forEach(function(p){liveV[p.id]=streaming?(dOn[p.id]&&p.live!=="no"?Math.round(30+rnd()*80):0):liveV[p.id];});
+  if(window.AMSA)AMSA.track(streaming?"sim_stream_start":"sim_stream_stop",{view:"golive",meta:{destinations:P.filter(function(p){return dOn[p.id]&&p.live!=="no";}).map(function(p){return p.id;}),quality:el("sQual").value}});
+  if(streaming){el("liveCard").querySelector("h2").innerHTML='<span class="livebadge">LIVE</span>&nbsp; '+el("sTitle").value.replace(/</g,"&lt;");hist=[];t0=Date.now();}
+};
+el("copyCfg").onclick=function(){var b=this;if(window.AMSA)AMSA.track("copy_relay_config",{view:"golive"});try{navigator.clipboard.writeText(el("cfg").textContent).then(function(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy";},1500);},function(){b.textContent="Select and copy manually";});}catch(e){b.textContent="Select and copy manually";}};
+
+// ---------- feed ----------
+var fOn={}; P.forEach(function(p){fOn[p.id]=true;});
+var creators=["Log Drum Society","Kwaito Tapes","Soweto Selects","Brooklyn Rooftop Sessions","Harare Art Collective","Jersey Club Daily","Gaborone Night Market","Generative Visuals Lab","Amapiano Archive","NYC Vinyl Diggers"];
+var titles=["Sunrise set, 2 hours, no talking","Live: Saturday crate dig","How this drop was built","Projection mapping test on a warehouse wall","Log drum sound design in 60 seconds","Back-to-back with a surprise guest","Street food and soundsystems","Noise field animation, made in p5.js","1998 kwaito classics mix","Tutorial: stems in Serato"];
+var feed=[];for(var f=0;f<20;f++){var pp=P[Math.floor(rnd()*P.length)].id;feed.push({p:pp,c:creators[Math.floor(rnd()*creators.length)],t:titles[Math.floor(rnd()*titles.length)],v:Math.round(Math.pow(10,3+rnd()*3)),ago:Math.round(rnd()*47)+1,live:rnd()<0.15&&(pp==="tw"||pp==="yt"||pp==="kick"),vert:pp==="tt"||pp==="ig"});}
+feed.sort(function(a,b){return (b.live-a.live)||(a.ago-b.ago);});
+function thumb(id,i){var h=(i*47)%360;return 'background:linear-gradient('+(i*37%180)+'deg, '+col(id)+', hsl('+h+' 45% 30%))';}
+function renderFeed(){
+  el("feedGrid").innerHTML=feed.filter(function(x){return fOn[x.p];}).map(function(x,i){return '<article class="card post"><div class="thumb'+(x.vert?" v":"")+'" style="'+thumb(x.p,i+3)+'"><span>'+(x.live?"● LIVE":(x.vert?"0:"+(15+i%45):(i%3+1)+":"+String(10+i*7%50)+":00"))+'</span></div><h4>'+x.t+'</h4><div class="m"><span>'+x.c+'</span>'+pill(x.p)+'</div><div class="m"><span>'+fmt(x.v)+(x.live?" watching":" views")+'</span><span>'+(x.live?"now":x.ago+"h ago")+'</span></div></article>';}).join("");
+}
+
+// ---------- channel ----------
+var lib=[["Harare sunset session","Mix","1:58:12",12200,"Public"],["Generative set visuals, 4K loop","Art","0:04:00",3100,"Public"],["Unreleased edits (members only)","Mix","0:47:30",880,"Members"],["Rooftop live replay","Live replay","2:31:05",5400,"Public"]];
+function renderLib(){
+  el("libCount").textContent=lib.length+" items";
+  el("libTable").innerHTML='<tr><th>Title</th><th>Type</th><th>Length</th><th class="n">Plays</th><th>Visibility</th></tr>'+lib.map(function(r){return '<tr><td>'+r[0].replace(/</g,"&lt;")+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td class="n">'+(typeof r[3]==="number"?fmt(r[3]):r[3])+'</td><td><span class="pill">'+r[4]+'</span></td></tr>';}).join("");
+}
+function loadFile(file){
+  if(!file)return;if(window.AMSA)AMSA.track("file_preview",{view:"channel",meta:{type:(file.type||"").split("/")[0]}});var v=el("player");v.src=URL.createObjectURL(file);el("nowPlaying").textContent=file.name;
+  v.onloadedmetadata=function(){var d=Math.round(v.duration||0);lib.unshift([file.name,file.type.indexOf("audio")===0?"Mix (audio)":"Video",Math.floor(d/3600)+":"+String(Math.floor(d/60)%60).padStart(2,"0")+":"+String(d%60).padStart(2,"0"),"new","Draft"]);renderLib();};
+}
+el("file").onchange=function(){loadFile(this.files[0]);};
+var dz=el("drop");
+dz.ondragover=function(e){e.preventDefault();dz.classList.add("over");};
+dz.ondragleave=function(){dz.classList.remove("over");};
+dz.ondrop=function(e){e.preventDefault();dz.classList.remove("over");loadFile(e.dataTransfer.files[0]);};
+
+// ---------- connections ----------
+function st(s){return s==="ok"?'<span class="status ok">Yes</span>':s==="lim"?'<span class="status lim">Limited</span>':'<span class="status no">No</span>';}
+el("connTable").innerHTML='<tr><th>Platform</th><th>Go live</th><th>Auto-post</th><th>Analytics</th><th>Official API</th><th>What to know</th></tr>'+P.map(function(p){return '<tr><td>'+pill(p.id)+'</td><td>'+st(p.live)+'</td><td>'+st(p.post)+'</td><td>'+st(p.an)+'</td><td class="note">'+p.api+'</td><td class="note" style="min-width:240px">'+p.notes+'</td></tr>';}).join("");
+
+window.AMSA_PLATFORMS=P;
+// ---------- routing ----------
+var views_=["dashboard","golive","feed","channel","connect","join"];
+function route(){var h=location.hash.slice(1);if(views_.indexOf(h)<0)h="dashboard";
+  views_.forEach(function(v){el("v-"+v).classList.toggle("on",v===h);});
+  document.querySelectorAll("nav a").forEach(function(a){a.classList.toggle("on",a.dataset.v===h);});
+  if(window.AMSA)AMSA.track("view",{view:h});}
+window.addEventListener("hashchange",route);
+
+chips("pfChips",on,renderDash);
+chips("feedChips",fOn,renderFeed);
+renderDash();renderHeat();renderDests();renderFeed();renderLib();route();
+setInterval(tickLive,1000);
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+/* ===== AMSA backend link (public demo) =====
+   The anon key below is public on purpose. Privilege comes from Row Level Security:
+   this page can only INSERT demo events and feedback, and join the waitlist through an RPC.
+   It can never read anything back. */
+var AMSA_SUPABASE_URL="__SUPABASE_URL__";
+var AMSA_SUPABASE_ANON_KEY="__SUPABASE_ANON_KEY__";
+(function(){
+var VERSION=(document.querySelector('meta[name="app-version"]')||{}).content||"0";
+var OUTBOX="amsa_outbox_v1",DEVKEY="amsa_device_id";
+function ls(){try{return window.localStorage;}catch(e){return null;}}
+function deviceId(){var s=ls(),id=null;try{id=s&&s.getItem(DEVKEY);}catch(e){}
+  if(!id){id="d_"+Math.random().toString(36).slice(2)+Date.now().toString(36);try{s&&s.setItem(DEVKEY,id);}catch(e){}}return id;}
+var DEVICE=deviceId();
+var configured=AMSA_SUPABASE_URL.indexOf("__")!==0&&window.supabase;
+var sb=configured?window.supabase.createClient(AMSA_SUPABASE_URL,AMSA_SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"amsa-demo-anon"}}):null;
+function setState(t){var e=document.getElementById("connState");if(e)e.textContent=t;}
+function readBox(){try{return JSON.parse((ls()&&ls().getItem(OUTBOX))||"[]");}catch(e){return [];}}
+function writeBox(b){try{ls()&&ls().setItem(OUTBOX,JSON.stringify(b.slice(-100)));}catch(e){}}
+function transient(err){if(!err)return false;var c=String(err.code||"");
+  if(/^(22|23)/.test(c)||c==="42501")return false;return true;}
+function send(item){
+  if(!sb)return Promise.resolve({ok:false,queued:true,error:{message:"not configured"}});
+  var p=item.rpc?sb.rpc(item.rpc,item.args):sb.from(item.table).insert(item.row);
+  return Promise.resolve(p).then(function(r){return r.error?{ok:false,error:r.error}:{ok:true};},function(e){return {ok:false,error:{message:String(e)}};});
+}
+function deliver(item){
+  return send(item).then(function(r){
+    if(!r.ok&&transient(r.error)){var b=readBox();item.at=item.at||Date.now();b.push(item);writeBox(b);r.queued=true;
+      setState("🟡 Saved on this device. It will send automatically.");}
+    else if(r.ok)setState("🟢 Connected to AMSA");
+    return r;});
+}
+function flush(){var b=readBox(),now=Date.now();if(!b.length||!sb)return;writeBox([]);
+  b.filter(function(i){return now-(i.at||now)<14*864e5;}).reduce(function(p,i){return p.then(function(){return deliver(i);});},Promise.resolve());}
+var lastEvt={};
+function track(event,o){o=o||{};var k=event+"|"+(o.view||"")+"|"+(o.platform||"");var t=Date.now();
+  if(lastEvt[k]&&t-lastEvt[k]<4000)return;lastEvt[k]=t;
+  deliver({table:"demo_events",row:{event:event,view:o.view||null,platform:o.platform||null,meta:o.meta||null,device_id:DEVICE,app_version:VERSION}});}
+window.AMSA={track:track,deliver:deliver,device:DEVICE,version:VERSION};
+document.getElementById("ver").textContent=VERSION;
+if(!sb)setState("⚪ Demo mode: backend not configured");
+else{setState("🟢 Connected to AMSA");flush();window.addEventListener("online",flush);}
+track("open",{view:(location.hash||"#dashboard").slice(1)});
+
+// ---- Join forms ----
+var P=window.AMSA_PLATFORMS||[];
+function boxes(id,items,name){document.getElementById(id).innerHTML=items.map(function(x){return '<label><input type="checkbox" name="'+name+'" value="'+x[0]+'"> '+x[1]+'</label>';}).join("");}
+boxes("wlPlatforms",P.filter(function(p){return p.id!=="own";}).map(function(p){return [p.id,p.name];}),"wlp");
+boxes("fbWants",[["multistream","Go live everywhere"],["analytics","Unified analytics"],["revenue","Revenue roll-up"],["feed","One feed"],["channel","My own channel"],["scheduler","Cross-posting scheduler"],["mobile_money","Mobile-money tips"]],"fbw");
+function checked(n){return Array.prototype.slice.call(document.querySelectorAll('input[name="'+n+'"]:checked')).map(function(i){return i.value;});}
+var rating=0,st=document.getElementById("stars");
+st.innerHTML=[1,2,3,4,5].map(function(n){return '<button type="button" role="radio" aria-checked="false" aria-label="'+n+' of 5" data-n="'+n+'">★</button>';}).join("");
+st.onclick=function(e){var b=e.target.closest("button");if(!b)return;rating=+b.dataset.n;
+  st.querySelectorAll("button").forEach(function(x){var on=+x.dataset.n<=rating;x.classList.toggle("on",on);x.setAttribute("aria-checked",+x.dataset.n===rating);});};
+function say(id,txt,cls){var m=document.getElementById(id);m.textContent=txt;m.className="msg "+(cls||"");}
+function outcome(r,okTxt){return r.ok?[okTxt,"ok"]:r.queued?["Saved on this device. It will send when the connection is back.","lim"]:["That didn't go through: "+((r.error&&r.error.message)||"unknown error")+". Check the details and try again.","down"];}
+document.getElementById("wlForm").onsubmit=function(e){e.preventDefault();
+  var em=document.getElementById("wlEmail").value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){say("wlMsg","Enter a valid email address, like you@example.com.","down");return;}
+  var item={rpc:"join_waitlist",args:{p_email:em,p_role:document.getElementById("wlRole").value,p_platforms:checked("wlp"),p_city:document.getElementById("wlCity").value,p_country:document.getElementById("wlCountry").value,p_device_id:DEVICE}};
+  say("wlMsg","Sending…");
+  deliver(item).then(function(r){var o=outcome(r,"You're on the list. We'll email you when your invite is ready.");say("wlMsg",o[0],o[1]);if(r.ok||r.queued)e.target.reset();});
+  track("waitlist_submit",{view:"join"});};
+document.getElementById("fbForm").onsubmit=function(e){e.preventDefault();
+  var msg=document.getElementById("fbMsg").value.trim(),wants=checked("fbw");
+  if(!rating&&!msg&&!wants.length){say("fbStatus","Pick a rating, tick something to build first, or write a note.","down");return;}
+  say("fbStatus","Sending…");
+  deliver({table:"feedback",row:{rating:rating||null,wants:wants.length?wants:null,message:msg||null,view:"join",device_id:DEVICE,app_version:VERSION}}).then(function(r){
+    var o=outcome(r,"Thanks. Your feedback is in.");say("fbStatus",o[0],o[1]);
+    if(r.ok||r.queued){e.target.reset();rating=0;st.querySelectorAll("button").forEach(function(x){x.classList.remove("on");});}});};
+})();
+</script>
+</body>
+</html>
