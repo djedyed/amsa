@@ -2,7 +2,7 @@
 
 One console for every streaming platform: go live everywhere at once, see one merged feed, and read unified analytics across YouTube, TikTok, Twitch, Facebook, Instagram, Kick, X, Threads and your own AMSA channel.
 
-This repo is the **public demo**. Share it with anyone. The private operator backend lives in `edmundondo/amsaabo`.
+This repo is the **public demo**. Share it with anyone. The private operator backend lives in `djedyed/amsaabo`.
 
 | | `amsa` (this repo) | `amsaabo` (private) |
 |---|---|---|
@@ -25,7 +25,7 @@ If the connection drops, submissions wait in the browser and send automatically 
 
 1. Upload `index.html` and this README to the repo root.
 2. Settings → Pages → Deploy from branch → `main` / root.
-3. It will be live at `https://edmundondo.github.io/amsa/`.
+3. It will be live at `https://djedyed.github.io/amsa/`.
 
 The Supabase URL and the public anon key are already set near the bottom of `index.html`. The anon key is meant to be public: permissions come from Row Level Security.
 

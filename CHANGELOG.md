@@ -6,5 +6,5 @@
 - Platforms: YouTube, TikTok, Twitch, Facebook, Instagram, Kick, X, Threads, AMSA channel.
 - Connected to Supabase: anonymous demo events, feedback and waitlist (insert-only, no reads).
 - Offline outbox: failed sends are kept in the browser for up to 14 days and re-sent automatically.
-- The Supabase client is stateless so it can never pick up a backoffice login on the same `edmundondo.github.io` origin.
+- The Supabase client is stateless so it can never pick up a backoffice login on the same `djedyed.github.io` origin.
 - No data export in the public demo by design; exports live in `amsaabo`.
