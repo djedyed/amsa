@@ -11,6 +11,13 @@ This repo is the **public demo**. Share it with anyone. The private operator bac
 | Can | Explore, simulate a stream, join the waitlist, leave feedback | Analytics, live history, explorer, waitlist, brand-deal CRM, imports, exports, admin roles |
 | Exports | None | All CSV exports + printable report |
 
+## Display settings (Dark Mode + Night Shift)
+
+- **Display settings** (round button, bottom right), modelled on Apple's System Settings → Displays:
+  - **Appearance: Auto / Light / Dark.** Auto follows the system Dark Mode (`prefers-color-scheme`) and switches live when the system does; Light or Dark overrides it for this site only. `theme-color` and `color-scheme` meta tags follow, so Safari's toolbar and form controls match.
+  - **Night Shift:** Schedule (Off / Custom, default 10:00 PM–7:00 AM like macOS), **Turn On Until Tomorrow** (stays on until 7:00 AM or the schedule's end; switching it off during the schedule keeps it off until morning), and a **Less Warm–More Warm** slider. It's a warm overlay that never blocks clicks, fades in gently (instantly with Reduce Motion), and is hidden when printing.
+  - Settings stay in this browser only and fall back gracefully when storage is blocked.
+
 ## What the demo sends to Supabase
 
 Only three things, all insert-only (it can never read anything back):

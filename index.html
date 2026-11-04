@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="app-version" content="1.0.1">
+<meta name="app-version" content="1.1.0">
 <meta name="description" content="AMSA public demo: one console for every streaming platform. Multistream, merged feed and unified analytics.">
 <title>AMSA Creator Console · Demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -138,6 +138,35 @@ video{width:100%;border-radius:8px;background:#000;max-height:360px}
   .two,.half{grid-template-columns:1fr}
 }
 @media (max-width:420px){.meter{grid-template-columns:80px 1fr 56px}}
+/* ===== Display settings: Appearance (Dark Mode) + Night Shift, modelled on macOS/iOS =====
+   Apple HIG practice: default to the system appearance, let people override it per app,
+   style everything through semantic tokens, keep contrast >= 4.5:1 in both appearances. */
+#ns-overlay{position:fixed;inset:0;pointer-events:none;z-index:2147483646;background:rgb(255,136,36);mix-blend-mode:multiply;opacity:0;transition:opacity 1.5s ease}
+.ds-fab{position:fixed;right:14px;bottom:14px;z-index:2147483645;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer;display:grid;place-items:center;padding:0}
+.ds-fab svg{width:20px;height:20px}
+.ds-panel{position:fixed;right:14px;bottom:66px;z-index:2147483647;width:min(320px,calc(100vw - 28px));max-height:calc(100vh - 90px);overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.28);padding:16px;display:grid;gap:14px;font-size:14px;line-height:1.45}
+.ds-panel[hidden]{display:none}
+.ds-panel h2{font-size:15px;margin:0}
+.ds-panel h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.ds-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:2px}
+.ds-seg button{border:0;background:none;color:var(--ink);padding:6px 4px;border-radius:7px;font:inherit;font-size:13px;cursor:pointer}
+.ds-seg button[aria-pressed="true"]{background:var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.22);font-weight:600}
+.ds-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ds-row select,.ds-row input[type=time]{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:4px 6px;width:auto}
+.ds-times{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.ds-switch{position:relative;width:40px;height:24px;flex:none}
+.ds-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.ds-switch span{position:absolute;inset:0;border-radius:12px;background:var(--line);transition:background .2s;pointer-events:none}
+.ds-switch span::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s}
+.ds-switch input:checked+span{background:#34c759}
+.ds-switch input:checked+span::after{transform:translateX(16px)}
+.ds-switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.ds-warm{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+.ds-warm input{width:100%;accent-color:#ff9f0a}
+.ds-note{font-size:12px;color:var(--muted);margin:0}
+.ds-status{font-size:12px;font-weight:600}
+@media (prefers-reduced-motion: reduce){#ns-overlay,.ds-switch span,.ds-switch span::after{transition:none}}
+@media print{#ns-overlay,.ds-fab,.ds-panel{display:none!important}}
 </style>
 </head>
 <body>
@@ -406,8 +435,9 @@ function renderTop(){
 function renderDash(){renderKPIs();renderViews();renderRev();renderGeo();renderTop();}
 
 // ---------- live sim ----------
-var liveV={yt:640,tt:1880,tw:410,fb:150,ig:0,kick:60,own:95},hist=[],t0=Date.now()-(1*3600+12*60)*1000,chatRate=0;
+var liveV={yt:640,tt:1880,tw:410,fb:150,ig:0,kick:60,x:70,th:0,own:95},hist=[],t0=Date.now()-(1*3600+12*60)*1000,chatRate=0;
 function tickLive(){
+  P.forEach(function(p){if(!(liveV[p.id]>=0))liveV[p.id]=0;});
   P.forEach(function(p){if(liveV[p.id]>0)liveV[p.id]=Math.max(5,Math.round(liveV[p.id]*(0.97+rnd()*0.065)));});
   var tot=0;P.forEach(function(p){tot+=liveV[p.id];});hist.push(tot);if(hist.length>60)hist.shift();
   chatRate=Math.round(tot*0.06*(0.8+rnd()*0.4));
@@ -570,6 +600,93 @@ document.getElementById("fbForm").onsubmit=function(e){e.preventDefault();
   deliver({table:"feedback",row:{rating:rating||null,wants:wants.length?wants:null,message:msg||null,view:"join",device_id:DEVICE,app_version:VERSION}}).then(function(r){
     var o=outcome(r,"Thanks. Your feedback is in.");say("fbStatus",o[0],o[1]);
     if(r.ok||r.queued){e.target.reset();rating=0;st.querySelectorAll("button").forEach(function(x){x.classList.remove("on");});}});};
+})();
+</script>
+<div id="ns-overlay" aria-hidden="true"></div>
+<button class="ds-fab" id="dsFab" type="button" aria-label="Display settings" aria-expanded="false" aria-controls="dsPanel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg></button>
+<section class="ds-panel" id="dsPanel" role="dialog" aria-label="Display settings" hidden>
+  <h2>Display</h2>
+  <div><h3 id="dsAppLbl">Appearance</h3>
+    <div class="ds-seg" role="group" aria-labelledby="dsAppLbl">
+      <button type="button" data-ap="auto">Auto</button><button type="button" data-ap="light">Light</button><button type="button" data-ap="dark">Dark</button>
+    </div>
+    <p class="ds-note" id="dsAppNote"></p></div>
+  <div style="display:grid;gap:10px"><h3>Night Shift</h3>
+    <p class="ds-note" style="margin-top:-4px">Shifts colors toward the warmer end of the spectrum after dark.</p>
+    <div class="ds-row"><label for="dsSched" style="margin:0;font-weight:500;font-size:13px">Schedule</label>
+      <select id="dsSched"><option value="off">Off</option><option value="custom">Custom</option></select></div>
+    <div class="ds-times" id="dsTimes"><label for="dsFrom" style="margin:0;font-weight:400">From</label><input type="time" id="dsFrom"><label for="dsTo" style="margin:0;font-weight:400">to</label><input type="time" id="dsTo"></div>
+    <div class="ds-row"><span style="font-size:13px" id="dsManLbl">Turn On Until Tomorrow</span>
+      <label class="ds-switch"><input type="checkbox" id="dsManual" aria-labelledby="dsManLbl"><span></span></label></div>
+    <div><div style="font-size:13px;margin-bottom:4px" id="dsWarmLbl">Color Temperature</div>
+      <div class="ds-warm"><span>Less Warm</span><input type="range" id="dsWarm" min="0" max="100" aria-labelledby="dsWarmLbl"><span>More Warm</span></div></div>
+    <div class="ds-status" id="dsStatus" role="status"></div>
+    <p class="ds-note">Turn Night Shift off while judging colors in artwork or video: like Apple's, it changes how colors look. If Night Shift is already on in your Mac or phone settings, you don't need it here too.</p>
+  </div>
+</section>
+<script>
+/* Display settings (Dark Mode + Night Shift), modelled on Apple's System Settings > Displays.
+   Appearance "Auto" follows the system (prefers-color-scheme); Light/Dark override it for this site only.
+   Night Shift: Off/Custom schedule (default 22:00-07:00 as on macOS), "Turn On Until Tomorrow",
+   Color Temperature slider. Settings live in this browser only (localStorage, wrapped in try/catch). */
+(function(){
+var KEY="amsa_display_v1",root=document.documentElement;
+var DEF={appearance:"auto",sched:"off",from:"22:00",to:"07:00",warmth:50,until:0,offUntil:0};
+function load(){try{var v=JSON.parse(localStorage.getItem(KEY));return v&&typeof v==="object"?v:{};}catch(e){return {};}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+var S={};for(var k in DEF)S[k]=DEF[k];var L=load();for(k in L)if(k in DEF)S[k]=L[k];
+var mq=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+function $(id){return document.getElementById(id);}
+function mins(t){var p=String(t||"0:0").split(":");return (+p[0]||0)*60+(+p[1]||0);}
+function inWindow(now,from,to){var n=now.getHours()*60+now.getMinutes(),f=mins(from),t=mins(to);if(f===t)return false;return f<t?(n>=f&&n<t):(n>=f||n<t);}
+function nextTime(now,hhmm){var d=new Date(now.getTime()),m=mins(hhmm);d.setHours(Math.floor(m/60),m%60,0,0);if(d<=now)d.setDate(d.getDate()+1);return d;}
+function nsActive(now){now=now||new Date();var t=now.getTime();if(S.until>t)return "manual";if(S.offUntil>t)return "";if(S.sched==="custom"&&inWindow(now,S.from,S.to))return "scheduled";return "";}
+function themeMeta(){
+  var dark=S.appearance==="dark"||(S.appearance==="auto"&&mq&&mq.matches);
+  var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.name="theme-color";document.head.appendChild(m);}
+  m.content=getComputedStyle(document.body||root).backgroundColor||(dark?"#131218":"#f3f1ec");
+  var cs=document.querySelector('meta[name="color-scheme"]');if(!cs){cs=document.createElement("meta");cs.name="color-scheme";document.head.appendChild(cs);}
+  cs.content=S.appearance==="auto"?"light dark":S.appearance;
+  return dark;}
+function applyAppearance(){
+  if(S.appearance==="auto")root.removeAttribute("data-theme");else root.setAttribute("data-theme",S.appearance);
+  var dark=themeMeta();
+  document.querySelectorAll("[data-ap]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.ap===S.appearance));});
+  var n=$("dsAppNote");if(n)n.textContent=S.appearance==="auto"?"Matching your system: "+(dark?"Dark":"Light")+".":"Overrides your system setting on this site only.";}
+function applyNightShift(){
+  var a=nsActive(),ov=$("ns-overlay");
+  if(ov)ov.style.opacity=a?(0.06+S.warmth/100*0.26).toFixed(3):"0";
+  var man=$("dsManual");if(man)man.checked=a==="manual"||a==="scheduled";
+  var st=$("dsStatus");
+  if(st){var now=new Date();
+    st.textContent=a==="manual"?"On until "+new Date(S.until).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})
+      :a==="scheduled"?"On until "+nextTime(now,S.to).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})
+      :S.sched==="custom"?"Turns on at "+nextTime(now,S.from).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Off";}
+  var t=$("dsTimes");if(t)t.style.display=S.sched==="custom"?"flex":"none";
+  root.toggleAttribute("data-night-shift",!!a);}
+function render(){$("dsSched").value=S.sched;$("dsFrom").value=S.from;$("dsTo").value=S.to;$("dsWarm").value=S.warmth;applyAppearance();applyNightShift();}
+document.querySelectorAll("[data-ap]").forEach(function(b){b.onclick=function(){S.appearance=b.dataset.ap;save();applyAppearance();};});
+$("dsSched").onchange=function(){S.sched=this.value;save();applyNightShift();};
+$("dsFrom").onchange=function(){if(this.value){S.from=this.value;save();applyNightShift();}};
+$("dsTo").onchange=function(){if(this.value){S.to=this.value;save();applyNightShift();}};
+$("dsWarm").oninput=function(){S.warmth=+this.value;save();applyNightShift();};
+/* Like Apple: switching on lasts until the morning (the schedule's end, or 7:00);
+   switching off during a scheduled window keeps it off until that window ends. */
+$("dsManual").onchange=function(){var now=new Date();
+  if(this.checked){S.offUntil=0;S.until=nextTime(now,S.sched==="custom"?S.to:"07:00").getTime();}
+  else{var wasSched=S.sched==="custom"&&inWindow(now,S.from,S.to);S.until=0;S.offUntil=wasSched?nextTime(now,S.to).getTime():0;}
+  save();applyNightShift();};
+var fab=$("dsFab"),panel=$("dsPanel");
+function openPanel(o){panel.hidden=!o;fab.setAttribute("aria-expanded",String(o));if(o)panel.querySelector('[aria-pressed="true"]').focus();}
+fab.onclick=function(){openPanel(panel.hidden);};
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!panel.hidden){openPanel(false);fab.focus();}});
+document.addEventListener("click",function(e){if(!panel.hidden&&!panel.contains(e.target)&&!fab.contains(e.target))openPanel(false);});
+if(mq){var h=function(){applyAppearance();};if(mq.addEventListener)mq.addEventListener("change",h);else if(mq.addListener)mq.addListener(h);}
+setInterval(applyNightShift,60000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)applyNightShift();});
+window.addEventListener("storage",function(e){if(e.key===KEY){var v=load();for(var k in v)if(k in DEF)S[k]=v[k];render();}});
+window.DisplaySettings={state:S,nightShiftActive:nsActive,inWindow:inWindow,apply:render};
+render();
 })();
 </script>
 </body>
