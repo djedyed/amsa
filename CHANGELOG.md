@@ -1,5 +1,8 @@
 # Changelog: amsa (public demo)
 
+## 1.0.1 (2026-11-03)
+- supabase-js updated 2.45.4 → 2.118.0 (pinned; released 2026-10-15). Tested against the real library: waitlist RPC, demo events and backoffice login all work unchanged.
+
 ## 1.0.0 (2026-11-01)
 - First public release, built from the AMSA Creator Console prototype v0.2.
 - Screens: Analytics (incl. live panel), Go live (multistream relay config), Feed, My channel, Connections, and the new Join the beta screen.
